@@ -5,9 +5,40 @@
     xmlns:local="using:SVCC.SurfaceDialDemo"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Microsoft.Toolkit.Uwp.UI.Controls"
+    RequestedTheme="Dark"
     mc:Ignorable="d">
+    
+    <Page.TopAppBar>
+        <CommandBar DefaultLabelPosition="Right">
+            <AppBarButton Icon="OpenFile" Label="Open" Click="OpenFileClicked"/>
+            <AppBarButton Icon="Save" Label="Save As" IsEnabled="{x:Bind IsDirty, Mode=OneWay}" Click="SaveAsClicked"/>
+            <AppBarButton Label="Brightness">
+                <AppBarButton.Icon>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Bright.png"/>
+                </AppBarButton.Icon>
+            </AppBarButton>
+            <AppBarButton Label="Contrast">
+                <AppBarButton.Icon>
+                    <BitmapIcon UriSource="ms-appx:///Assets/Contrast.png"/>
+                </AppBarButton.Icon>
+            </AppBarButton>
+        </CommandBar>
+    </Page.TopAppBar>
 
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid Background="{ThemeResource SystemControlAcrylicWindowBrush}">
+
+        <controls:DropShadowPanel BlurRadius="8"
+                                  ShadowOpacity="0.7"
+                                  OffsetX="2"
+                                  OffsetY="2"
+                                  Color="Black"
+                                  Margin="24"
+                                  VerticalAlignment="Center"
+                                  HorizontalAlignment="Center">
+            <Image x:Name="ImageControl" Stretch="Uniform"/>
+        </controls:DropShadowPanel>
+
 
     </Grid>
 </Page>
