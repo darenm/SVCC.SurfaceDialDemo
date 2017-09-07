@@ -71,7 +71,7 @@
                     VerticalAlignment="Top"
                     HorizontalAlignment="Right"
                     Style="{StaticResource ButtonRevealStyle}"
-                    Click="ClosePaneClicked">
+                    Click="ClosePanelClicked">
                 <SymbolIcon Symbol="ClosePane" />
             </Button>
             <TextBlock Style="{StaticResource TitleTextBlockStyle}"
