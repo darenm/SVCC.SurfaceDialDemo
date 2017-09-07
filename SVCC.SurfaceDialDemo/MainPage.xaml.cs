@@ -289,6 +289,7 @@ namespace SVCC.SurfaceDialDemo
             {
                 _currentFile = file;
                 WriteableBitmap = await BitmapFactory.FromStream(await file.OpenAsync(FileAccessMode.Read));
+                ImageControl.Visibility = Visibility.Visible;
             }
             IsFileOpen = true;
         }

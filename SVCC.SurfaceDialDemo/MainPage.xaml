@@ -48,8 +48,11 @@
                                   VerticalAlignment="Center"
                                   HorizontalAlignment="Center">
             <Grid>
-                <Image x:Name="ImageControl" Stretch="Uniform"
-                       Source="{x:Bind WriteableBitmap, Mode=OneWay}" />
+                <controls:ImageEx x:Name="ImageControl"
+                                  IsCacheEnabled="True"
+                                  Source="{x:Bind WriteableBitmap, Mode=OneWay}"
+                                  Visibility="Collapsed"
+                                  Stretch="Uniform"/>
                 <xaml:CanvasControl x:Name="EffectCanvas" 
                                     Draw="Canvas_Draw"
                                     Visibility="Collapsed"
