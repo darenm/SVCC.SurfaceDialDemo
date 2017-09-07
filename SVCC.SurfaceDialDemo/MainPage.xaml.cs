@@ -116,6 +116,11 @@ namespace SVCC.SurfaceDialDemo
 
         private void AddDialMenuItems()
         {
+            if (!RadialController.IsSupported())
+            {
+                return;
+            }
+
             var brightnessIcon = RandomAccessStreamReference.CreateFromUri(new Uri("ms-appx:///Assets/Bright.png"));
             _brightnessMenuItem = RadialControllerMenuItem.CreateFromIcon("Brightness", brightnessIcon);
             _brightnessMenuItem.Invoked += BrightnessMenuItemOnInvoked;
