@@ -30,7 +30,6 @@ namespace SVCC.SurfaceDialDemo
         #region Fields
 
         private StorageFile _currentFile;
-        private WriteableBitmap _filteredBitmap;
         private string _filterText = "Sample";
         private bool _isDirty;
         private bool _isFileOpen;
@@ -70,16 +69,6 @@ namespace SVCC.SurfaceDialDemo
             }
         }
 
-        public WriteableBitmap FilteredBitmap
-        {
-            get => _filteredBitmap;
-            set
-            {
-                _filteredBitmap = value;
-                OnPropertyChanged();
-            }
-        }
-
         public WriteableBitmap WriteableBitmap
         {
             get => _writeableBitmap;
@@ -113,14 +102,13 @@ namespace SVCC.SurfaceDialDemo
             ((ExposureEffect) _effect).Exposure = (float) e.NewValue;
         }
 
-        private async void BrightnessClicked(object sender, RoutedEventArgs e)
+        private void BrightnessClicked(object sender, RoutedEventArgs e)
         {
             if (ContrastToggle.IsChecked.GetValueOrDefault())
             {
                 ContrastToggle.IsChecked = false;
             }
             FilterText = "Brightness";
-            await LoadWin2DImageAsync();
             _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
 
             HandlePanelVisibility();
@@ -152,14 +140,13 @@ namespace SVCC.SurfaceDialDemo
             ((ContrastEffect) _effect).Contrast = (float) e.NewValue;
         }
 
-        private async void ContrastClicked(object sender, RoutedEventArgs e)
+        private void ContrastClicked(object sender, RoutedEventArgs e)
         {
             if (BrightnessToggle.IsChecked.GetValueOrDefault())
             {
                 BrightnessToggle.IsChecked = false;
             }
             FilterText = "Contrast";
-            await LoadWin2DImageAsync();
             _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
 
             HandlePanelVisibility();
@@ -199,7 +186,6 @@ namespace SVCC.SurfaceDialDemo
         private void ResetFilter()
         {
             EffectCanvas.Visibility = Visibility.Collapsed;
-            FilteredBitmap = null;
         }
 
         private async void UndoClicked(object sender, RoutedEventArgs e)
@@ -290,6 +276,7 @@ namespace SVCC.SurfaceDialDemo
                 _currentFile = file;
                 WriteableBitmap = await BitmapFactory.FromStream(await file.OpenAsync(FileAccessMode.Read));
                 ImageControl.Visibility = Visibility.Visible;
+                await LoadWin2DImageAsync();
             }
             IsFileOpen = true;
         }
