@@ -87,70 +87,49 @@ namespace SVCC.SurfaceDialDemo
             ValueSliderPanel.Loaded += ValueSliderPanelOnLoaded;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
         private async void ApplyFilterClicked(object sender, RoutedEventArgs e)
         {
             IsDirty = true;
             WriteableBitmap = await _effect.WriteToWriteableBitmapAsync(EffectCanvas, _loadedImage.Size);
             ResetFilter();
-            ClosePane();
-        }
-
-        private void BrightnessChanged(object sender, RangeBaseValueChangedEventArgs e)
-        {
-            ((ExposureEffect) _effect).Exposure = (float) e.NewValue;
-        }
-
-        private void BrightnessClicked(object sender, RoutedEventArgs e)
-        {
-            if (ContrastToggle.IsChecked.GetValueOrDefault())
-            {
-                ContrastToggle.IsChecked = false;
-            }
-            FilterText = "Brightness";
-            _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
-
-            HandlePanelVisibility();
-
-            ValueSlider.ValueChanged += BrightnessChanged;
+            ClosePanel();
         }
 
         private void CancelFilterClicked(object sender, RoutedEventArgs e)
         {
             ResetFilter();
-            ClosePane();
+            ClosePanel();
         }
 
-        private void ClosePane()
+        private void ResetFilter()
+        {
+            EffectCanvas.Visibility = Visibility.Collapsed;
+        }
+
+        private async void UndoClicked(object sender, RoutedEventArgs e)
+        {
+            await OpenImageFile(_currentFile);
+            IsDirty = false;
+        }
+
+        #region Panel
+
+        private void ValueSliderPanelOnLoaded(object sender, RoutedEventArgs routedEventArgs)
+        {
+            SetupComposition();
+        }
+
+        private void ClosePanel()
         {
             BrightnessToggle.IsChecked = false;
             ContrastToggle.IsChecked = false;
             HandlePanelVisibility();
         }
 
-        private void ClosePaneClicked(object sender, RoutedEventArgs e)
+        private void ClosePanelClicked(object sender, RoutedEventArgs e)
         {
             ResetFilter();
-            ClosePane();
-        }
-
-        private void ContrastChanged(object sender, RangeBaseValueChangedEventArgs e)
-        {
-            ((ContrastEffect) _effect).Contrast = (float) e.NewValue;
-        }
-
-        private void ContrastClicked(object sender, RoutedEventArgs e)
-        {
-            if (BrightnessToggle.IsChecked.GetValueOrDefault())
-            {
-                BrightnessToggle.IsChecked = false;
-            }
-            FilterText = "Contrast";
-            _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
-
-            HandlePanelVisibility();
-            ValueSlider.ValueChanged += ContrastChanged;
+            ClosePanel();
         }
 
         private void HandlePanelVisibility()
@@ -172,32 +151,63 @@ namespace SVCC.SurfaceDialDemo
             }
         }
 
-        private async Task LoadWin2DImageAsync()
+        #endregion
+
+        #region Brightness
+
+        private void BrightnessChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
-            _loadedImage = await WriteableBitmap.CreateCanvasBitmapAsync(EffectCanvas);
-            _ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
+            ((ExposureEffect) _effect).Exposure = (float) e.NewValue;
         }
+
+        private void BrightnessClicked(object sender, RoutedEventArgs e)
+        {
+            if (ContrastToggle.IsChecked.GetValueOrDefault())
+            {
+                ContrastToggle.IsChecked = false;
+            }
+            FilterText = "Brightness";
+            _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
+
+            HandlePanelVisibility();
+
+            ValueSlider.ValueChanged += BrightnessChanged;
+        }
+
+        #endregion
+
+        #region Contrast
+
+        private void ContrastChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            ((ContrastEffect) _effect).Contrast = (float) e.NewValue;
+        }
+
+        private void ContrastClicked(object sender, RoutedEventArgs e)
+        {
+            if (BrightnessToggle.IsChecked.GetValueOrDefault())
+            {
+                BrightnessToggle.IsChecked = false;
+            }
+            FilterText = "Contrast";
+            _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
+
+            HandlePanelVisibility();
+            ValueSlider.ValueChanged += ContrastChanged;
+        }
+
+        #endregion
+
+        #region IPropertyChanged
+
+        public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        private void ResetFilter()
-        {
-            EffectCanvas.Visibility = Visibility.Collapsed;
-        }
-
-        private async void UndoClicked(object sender, RoutedEventArgs e)
-        {
-            await OpenImageFile(_currentFile);
-            IsDirty = false;
-        }
-
-        private void ValueSliderPanelOnLoaded(object sender, RoutedEventArgs routedEventArgs)
-        {
-            SetupComposition();
-        }
+        #endregion
 
         #region Composition
 
@@ -279,6 +289,12 @@ namespace SVCC.SurfaceDialDemo
                 await LoadWin2DImageAsync();
             }
             IsFileOpen = true;
+        }
+
+        private async Task LoadWin2DImageAsync()
+        {
+            _loadedImage = await WriteableBitmap.CreateCanvasBitmapAsync(EffectCanvas);
+            _ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
         }
 
         private async void SaveAsClicked(object sender, RoutedEventArgs e)
