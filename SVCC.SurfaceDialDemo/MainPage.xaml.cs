@@ -33,7 +33,7 @@ namespace SVCC.SurfaceDialDemo
         private string _filterText = "Sample";
         private bool _isDirty;
         private bool _isFileOpen;
-        private WriteableBitmap _writeableBitmap;
+        private WriteableBitmap _mainImageBitmap;
 
         #endregion
 
@@ -69,12 +69,12 @@ namespace SVCC.SurfaceDialDemo
             }
         }
 
-        public WriteableBitmap WriteableBitmap
+        public WriteableBitmap MainImageBitmap
         {
-            get => _writeableBitmap;
+            get => _mainImageBitmap;
             set
             {
-                _writeableBitmap = value;
+                _mainImageBitmap = value;
                 OnPropertyChanged();
             }
         }
@@ -90,7 +90,7 @@ namespace SVCC.SurfaceDialDemo
         private async void ApplyFilterClicked(object sender, RoutedEventArgs e)
         {
             IsDirty = true;
-            WriteableBitmap = await _effect.WriteToWriteableBitmapAsync(EffectCanvas, _loadedImage.Size);
+            MainImageBitmap = await _effect.WriteToWriteableBitmapAsync(EffectCanvas, _loadedImage.Size);
             ResetFilter();
             ClosePanel();
         }
@@ -284,7 +284,7 @@ namespace SVCC.SurfaceDialDemo
             if (file != null)
             {
                 _currentFile = file;
-                WriteableBitmap = await BitmapFactory.FromStream(await file.OpenAsync(FileAccessMode.Read));
+                MainImageBitmap = await BitmapFactory.FromStream(await file.OpenAsync(FileAccessMode.Read));
                 ImageControl.Visibility = Visibility.Visible;
                 await LoadWin2DImageAsync();
             }
@@ -293,7 +293,7 @@ namespace SVCC.SurfaceDialDemo
 
         private async Task LoadWin2DImageAsync()
         {
-            _loadedImage = await WriteableBitmap.CreateCanvasBitmapAsync(EffectCanvas);
+            _loadedImage = await MainImageBitmap.CreateCanvasBitmapAsync(EffectCanvas);
             _ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
         }
 
@@ -328,7 +328,7 @@ namespace SVCC.SurfaceDialDemo
 
                 using (var stream = await file.OpenAsync(FileAccessMode.ReadWrite))
                 {
-                    await WriteableBitmap.ToStream(stream, encoderId);
+                    await MainImageBitmap.ToStream(stream, encoderId);
                 }
 
                 var status = await CachedFileManager.CompleteUpdatesAsync(file);
