@@ -57,8 +57,16 @@ namespace SVCC.SurfaceDialDemo
             get => _isFileOpen;
             set
             {
-                _isFileOpen = value;
-                OnPropertyChanged();
+                if (_isFileOpen != value)
+                {
+                    _isFileOpen = value;
+                    if (_isFileOpen)
+                    {
+                        AddDialMenuItems();
+                    }
+
+                    OnPropertyChanged();
+                }
             }
         }
 
@@ -95,40 +103,96 @@ namespace SVCC.SurfaceDialDemo
 
         private void SetupSurfaceDial()
         {
-            //if (!RadialController.IsSupported())
-            //{
-            //    return;
-            //}
+            if (!RadialController.IsSupported())
+            {
+                return;
+            }
+
+            var config = RadialControllerConfiguration.GetForCurrentView();
+            config.SetDefaultMenuItems(new [] { RadialControllerSystemMenuItemKind.Volume });
 
             _surfaceDial = RadialController.CreateForCurrentView();
+        }
 
+        private void AddDialMenuItems()
+        {
             var brightnessIcon = RandomAccessStreamReference.CreateFromUri(new Uri("ms-appx:///Assets/Bright.png"));
-            var brightnessMenuItem = RadialControllerMenuItem.CreateFromIcon("Brightness", brightnessIcon);
-            brightnessMenuItem.Invoked += BrightnessMenuItemOnInvoked;
-            _surfaceDial.Menu.Items.Add(brightnessMenuItem);
+            _brightnessMenuItem = RadialControllerMenuItem.CreateFromIcon("Brightness", brightnessIcon);
+            _brightnessMenuItem.Invoked += BrightnessMenuItemOnInvoked;
+            _surfaceDial.Menu.Items.Add(_brightnessMenuItem);
 
             var contrastIcon = RandomAccessStreamReference.CreateFromUri(new Uri("ms-appx:///Assets/Contrast.png"));
-            var contrastMenuItem = RadialControllerMenuItem.CreateFromIcon("Contrast", contrastIcon);
-            contrastMenuItem.Invoked += ContrastMenuItemOnInvoked;
-            _surfaceDial.Menu.Items.Add(contrastMenuItem);
-
+            _contrastMenuItem = RadialControllerMenuItem.CreateFromIcon("Contrast", contrastIcon);
+            _contrastMenuItem.Invoked += ContrastMenuItemOnInvoked;
+            _surfaceDial.Menu.Items.Add(_contrastMenuItem);
         }
+
         private void BrightnessMenuItemOnInvoked(RadialControllerMenuItem radialControllerMenuItem, object o)
         {
             ShowBrightnessFilter();
+            SubscribeDialEvents();
         }
 
         private void ContrastMenuItemOnInvoked(RadialControllerMenuItem radialControllerMenuItem, object o)
         {
             ShowContrastFilter();
+            SubscribeDialEvents();
+        }
+
+        private void SubscribeDialEvents()
+        {
+            _surfaceDial.RotationChanged += SurfaceDialOnRotationChanged;
+            _surfaceDial.ButtonClicked += SurfaceDialOnButtonClicked;
+        }
+
+        private void UnsubscribeDialEvents()
+        {
+            _surfaceDial.RotationChanged -= SurfaceDialOnRotationChanged;
+            _surfaceDial.ButtonClicked -= SurfaceDialOnButtonClicked;
+        }
+
+        private async void SurfaceDialOnButtonClicked(
+            RadialController radialController, 
+            RadialControllerButtonClickedEventArgs radialControllerButtonClickedEventArgs)
+        {
+            await ApplyFilter();
+            UnsubscribeDialEvents();
+        }
+
+        private void SurfaceDialOnRotationChanged(
+            RadialController radialController, 
+            RadialControllerRotationChangedEventArgs radialControllerRotationChangedEventArgs)
+        {
+            if (radialControllerRotationChangedEventArgs.RotationDeltaInDegrees > 0)
+            {
+                if (ValueSlider.Value < ValueSlider.Maximum)
+                {
+                    ValueSlider.Value += ValueSlider.StepFrequency;
+                }
+            }
+            else
+            {
+                if (ValueSlider.Value > ValueSlider.Minimum)
+                {
+                    ValueSlider.Value -= ValueSlider.StepFrequency;
+                }
+            }
         }
 
         #endregion
 
+        #region Filter Operations
+
         private async void ApplyFilterClicked(object sender, RoutedEventArgs e)
+        {
+            await ApplyFilter();
+        }
+
+        private async Task ApplyFilter()
         {
             IsDirty = true;
             MainImageBitmap = await _effect.WriteToWriteableBitmapAsync(EffectCanvas, _loadedImage.Size);
+            await LoadWin2DImageAsync();
             ResetFilter();
             ClosePanel();
         }
@@ -150,6 +214,8 @@ namespace SVCC.SurfaceDialDemo
             IsDirty = false;
         }
 
+        #endregion
+
         #region Panel
 
         private void ValueSliderPanelOnLoaded(object sender, RoutedEventArgs routedEventArgs)
@@ -159,9 +225,11 @@ namespace SVCC.SurfaceDialDemo
 
         private void ClosePanel()
         {
-            BrightnessToggle.IsChecked = false;
-            ContrastToggle.IsChecked = false;
-            HandlePanelVisibility();
+            ValueSlider.ValueChanged -= ContrastChanged;
+            ValueSlider.ValueChanged -= BrightnessChanged;
+
+            ValueSliderPanel.Visibility = Visibility.Collapsed;
+            EffectCanvas.Visibility = Visibility.Collapsed;
         }
 
         private void ClosePanelClicked(object sender, RoutedEventArgs e)
@@ -170,23 +238,11 @@ namespace SVCC.SurfaceDialDemo
             ClosePanel();
         }
 
-        private void HandlePanelVisibility()
+        private void ShowPanel()
         {
-            ValueSlider.ValueChanged -= ContrastChanged;
-            ValueSlider.ValueChanged -= BrightnessChanged;
-
-            if (ContrastToggle.IsChecked.HasValue && ContrastToggle.IsChecked.Value ||
-                BrightnessToggle.IsChecked.HasValue && BrightnessToggle.IsChecked.Value)
-            {
-                ValueSlider.Value = 0;
-                ValueSliderPanel.Visibility = Visibility.Visible;
-                EffectCanvas.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                ValueSliderPanel.Visibility = Visibility.Collapsed;
-                EffectCanvas.Visibility = Visibility.Collapsed;
-            }
+            ValueSlider.Value = 0;
+            ValueSliderPanel.Visibility = Visibility.Visible;
+            EffectCanvas.Visibility = Visibility.Visible;
         }
 
         #endregion
@@ -205,15 +261,9 @@ namespace SVCC.SurfaceDialDemo
 
         private void ShowBrightnessFilter()
         {
-            if (ContrastToggle.IsChecked.GetValueOrDefault())
-            {
-                ContrastToggle.IsChecked = false;
-            }
             FilterText = "Brightness";
             _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
-
-            HandlePanelVisibility();
-
+            ShowPanel();
             ValueSlider.ValueChanged += BrightnessChanged;
         }
 
@@ -233,14 +283,9 @@ namespace SVCC.SurfaceDialDemo
 
         private void ShowContrastFilter()
         {
-            if (BrightnessToggle.IsChecked.GetValueOrDefault())
-            {
-                BrightnessToggle.IsChecked = false;
-            }
             FilterText = "Contrast";
             _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
-
-            HandlePanelVisibility();
+            ShowPanel();
             ValueSlider.ValueChanged += ContrastChanged;
         }
 
@@ -406,6 +451,8 @@ namespace SVCC.SurfaceDialDemo
         private CanvasBitmap _loadedImage;
         private ICanvasImage _effect;
         private double _ratio;
+        private RadialControllerMenuItem _brightnessMenuItem;
+        private RadialControllerMenuItem _contrastMenuItem;
 
         private void Canvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {

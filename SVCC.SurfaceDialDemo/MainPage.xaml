@@ -13,27 +13,32 @@
     <Page.TopAppBar>
         <CommandBar DefaultLabelPosition="Right">
             <AppBarButton Icon="OpenFile" Label="Open" Click="OpenFileClicked"
+                          AccessKey="O"
                           Style="{StaticResource AppBarButtonRevealStyle}" />
             <AppBarButton Icon="Save" Label="Save As" IsEnabled="{x:Bind IsDirty, Mode=OneWay}" Click="SaveAsClicked"
+                          AccessKey="S"
                           Style="{StaticResource AppBarButtonRevealStyle}" />
             <AppBarButton Icon="Undo" Label="Undo" IsEnabled="{x:Bind IsDirty, Mode=OneWay}" Click="UndoClicked"
+                          AccessKey="U"
                           Style="{StaticResource AppBarButtonRevealStyle}" />
-            <AppBarToggleButton Label="Brightness" IsEnabled="{x:Bind IsFileOpen, Mode=OneWay}"
-                                x:Name="BrightnessToggle"
-                                Style="{StaticResource AppBarToggleButtonRevealStyle}"
-                                Click="BrightnessClicked">
-                <AppBarToggleButton.Icon>
+            <AppBarButton Label="Brightness" IsEnabled="{x:Bind IsFileOpen, Mode=OneWay}"
+                          x:Name="BrightnessToggle"
+                          AccessKey="B"
+                          Style="{StaticResource AppBarButtonRevealStyle}"
+                          Click="BrightnessClicked">
+                <AppBarButton.Icon>
                     <BitmapIcon UriSource="ms-appx:///Assets/Bright.png" />
-                </AppBarToggleButton.Icon>
-            </AppBarToggleButton>
-            <AppBarToggleButton Label="Contrast" IsEnabled="{x:Bind IsFileOpen, Mode=OneWay}"
-                                x:Name="ContrastToggle"
-                                Style="{StaticResource AppBarToggleButtonRevealStyle}"
-                                Click="ContrastClicked">
-                <AppBarToggleButton.Icon>
+                </AppBarButton.Icon>
+            </AppBarButton>
+            <AppBarButton Label="Contrast" IsEnabled="{x:Bind IsFileOpen, Mode=OneWay}"
+                          x:Name="ContrastToggle"
+                          AccessKey="C"
+                          Style="{StaticResource AppBarButtonRevealStyle}"
+                          Click="ContrastClicked">
+                <AppBarButton.Icon>
                     <BitmapIcon UriSource="ms-appx:///Assets/Contrast.png" />
-                </AppBarToggleButton.Icon>
-            </AppBarToggleButton>
+                </AppBarButton.Icon>
+            </AppBarButton>
         </CommandBar>
     </Page.TopAppBar>
 
@@ -52,8 +57,8 @@
                                   IsCacheEnabled="True"
                                   Source="{x:Bind MainImageBitmap, Mode=OneWay}"
                                   Visibility="Collapsed"
-                                  Stretch="Uniform"/>
-                <xaml:CanvasControl x:Name="EffectCanvas" 
+                                  Stretch="Uniform" />
+                <xaml:CanvasControl x:Name="EffectCanvas"
                                     Draw="Canvas_Draw"
                                     Visibility="Collapsed"
                                     SizeChanged="Canvas_SizeChanged" />
@@ -91,11 +96,13 @@
                             HorizontalAlignment="Center">
                     <Button Margin="4"
                             Style="{StaticResource ButtonRevealStyle}"
+                            AccessKey="A"
                             Click="ApplyFilterClicked">
                         Apply Filter
                     </Button>
                     <Button Margin="4"
                             Style="{StaticResource ButtonRevealStyle}"
+                            AccessKey="C"
                             Click="CancelFilterClicked">
                         Cancel Filter
                     </Button>
