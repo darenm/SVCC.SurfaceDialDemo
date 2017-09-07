@@ -50,7 +50,7 @@
             <Grid>
                 <controls:ImageEx x:Name="ImageControl"
                                   IsCacheEnabled="True"
-                                  Source="{x:Bind WriteableBitmap, Mode=OneWay}"
+                                  Source="{x:Bind MainImageBitmap, Mode=OneWay}"
                                   Visibility="Collapsed"
                                   Stretch="Uniform"/>
                 <xaml:CanvasControl x:Name="EffectCanvas" 
