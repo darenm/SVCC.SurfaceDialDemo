@@ -104,12 +104,23 @@ namespace SVCC.SurfaceDialDemo
 
             var brightnessIcon = RandomAccessStreamReference.CreateFromUri(new Uri("ms-appx:///Assets/Bright.png"));
             var brightnessMenuItem = RadialControllerMenuItem.CreateFromIcon("Brightness", brightnessIcon);
+            brightnessMenuItem.Invoked += BrightnessMenuItemOnInvoked;
             _surfaceDial.Menu.Items.Add(brightnessMenuItem);
 
             var contrastIcon = RandomAccessStreamReference.CreateFromUri(new Uri("ms-appx:///Assets/Contrast.png"));
             var contrastMenuItem = RadialControllerMenuItem.CreateFromIcon("Contrast", contrastIcon);
+            contrastMenuItem.Invoked += ContrastMenuItemOnInvoked;
             _surfaceDial.Menu.Items.Add(contrastMenuItem);
 
+        }
+        private void BrightnessMenuItemOnInvoked(RadialControllerMenuItem radialControllerMenuItem, object o)
+        {
+            ShowBrightnessFilter();
+        }
+
+        private void ContrastMenuItemOnInvoked(RadialControllerMenuItem radialControllerMenuItem, object o)
+        {
+            ShowContrastFilter();
         }
 
         #endregion
@@ -189,6 +200,11 @@ namespace SVCC.SurfaceDialDemo
 
         private void BrightnessClicked(object sender, RoutedEventArgs e)
         {
+            ShowBrightnessFilter();
+        }
+
+        private void ShowBrightnessFilter()
+        {
             if (ContrastToggle.IsChecked.GetValueOrDefault())
             {
                 ContrastToggle.IsChecked = false;
@@ -211,6 +227,11 @@ namespace SVCC.SurfaceDialDemo
         }
 
         private void ContrastClicked(object sender, RoutedEventArgs e)
+        {
+            ShowContrastFilter();
+        }
+
+        private void ShowContrastFilter()
         {
             if (BrightnessToggle.IsChecked.GetValueOrDefault())
             {
