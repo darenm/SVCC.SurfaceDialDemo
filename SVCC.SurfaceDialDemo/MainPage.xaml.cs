@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Windows.Foundation;
@@ -10,9 +8,7 @@ using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Provider;
-using Windows.UI;
 using Windows.UI.Composition;
-using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -20,7 +16,6 @@ using Windows.UI.Xaml.Hosting;
 using Windows.UI.Xaml.Media.Imaging;
 using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Effects;
-using Microsoft.Graphics.Canvas.UI;
 using Microsoft.Graphics.Canvas.UI.Xaml;
 using Template10.Services.Dialogs;
 
@@ -32,6 +27,8 @@ namespace SVCC.SurfaceDialDemo
     /// </summary>
     public sealed partial class MainPage : Page, INotifyPropertyChanged
     {
+        #region Fields
+
         private StorageFile _currentFile;
         private WriteableBitmap _filteredBitmap;
         private string _filterText = "Sample";
@@ -39,11 +36,9 @@ namespace SVCC.SurfaceDialDemo
         private bool _isFileOpen;
         private WriteableBitmap _writeableBitmap;
 
-        public MainPage()
-        {
-            InitializeComponent();
-            ValueSliderPanel.Loaded += ValueSliderPanelOnLoaded;
-        }
+        #endregion
+
+        #region Properties
 
         public bool IsDirty
         {
@@ -95,13 +90,20 @@ namespace SVCC.SurfaceDialDemo
             }
         }
 
+        #endregion
+
+        public MainPage()
+        {
+            InitializeComponent();
+            ValueSliderPanel.Loaded += ValueSliderPanelOnLoaded;
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private async void ApplyFilterClicked(object sender, RoutedEventArgs e)
         {
-            await TransferFromCanvasToWriteableBitmapAsync();
             IsDirty = true;
-            WriteableBitmap = FilteredBitmap;
+            WriteableBitmap = await _effect.WriteToWriteableBitmapAsync(EffectCanvas, _loadedImage.Size);
             ResetFilter();
             ClosePane();
         }
@@ -118,30 +120,12 @@ namespace SVCC.SurfaceDialDemo
                 ContrastToggle.IsChecked = false;
             }
             FilterText = "Brightness";
-            await LoadWritableBitmapToCanvasBitmap();
-            _effect = CreateExposureEffect();
+            await _loadedImage.ReadFromWriteableBitmapAsync(WriteableBitmap, EffectCanvas);
+            _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
 
             HandlePanelVisibility();
 
             ValueSlider.ValueChanged += BrightnessChanged;
-        }
-
-        private async Task LoadWritableBitmapToCanvasBitmap()
-        {
-            using (var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream())
-            {
-                await WriteableBitmap.ToStream(stream, BitmapEncoder.PngEncoderId);
-
-                using (var inputStream = stream.CloneStream())
-                {
-                    FilteredBitmap = await BitmapFactory.FromStream(inputStream);
-                    using (var clone = inputStream.CloneStream())
-                    {
-                        _loadedImage = await CanvasBitmap.LoadAsync(EffectCanvas, clone);
-                        _ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
-                    }
-                }
-            }
         }
 
         private void CancelFilterClicked(object sender, RoutedEventArgs e)
@@ -175,8 +159,8 @@ namespace SVCC.SurfaceDialDemo
                 BrightnessToggle.IsChecked = false;
             }
             FilterText = "Contrast";
-            await LoadWritableBitmapToCanvasBitmap();
-            _effect = CreateContrastEffect();
+            await _loadedImage.ReadFromWriteableBitmapAsync(WriteableBitmap, EffectCanvas);
+            _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
 
             HandlePanelVisibility();
             ValueSlider.ValueChanged += ContrastChanged;
@@ -205,6 +189,68 @@ namespace SVCC.SurfaceDialDemo
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        private void ResetFilter()
+        {
+            EffectCanvas.Visibility = Visibility.Collapsed;
+            FilteredBitmap = null;
+        }
+
+        private async void UndoClicked(object sender, RoutedEventArgs e)
+        {
+            await OpenImageFile(_currentFile);
+            IsDirty = false;
+        }
+
+        private void ValueSliderPanelOnLoaded(object sender, RoutedEventArgs routedEventArgs)
+        {
+            SetupComposition();
+        }
+
+        #region Composition
+
+        private void SetupComposition()
+        {
+            ElementCompositionPreview.SetIsTranslationEnabled(ValueSliderPanel, true);
+            ElementCompositionPreview.GetElementVisual(ValueSliderPanel);
+
+            ElementCompositionPreview.SetImplicitShowAnimation(ValueSliderPanel, SetupAnimation(true));
+            ElementCompositionPreview.SetImplicitHideAnimation(ValueSliderPanel, SetupAnimation(false));
+        }
+
+        private static CompositionAnimationGroup SetupAnimation(bool isShow)
+        {
+            float horizontalOffsetFrom, horizontalOffsetTo;
+            if (isShow)
+            {
+                horizontalOffsetFrom = -320;
+                horizontalOffsetTo = 0;
+            }
+            else
+            {
+                horizontalOffsetFrom = 0;
+                horizontalOffsetTo = -320;
+            }
+
+            var sliderPanelTranslationAnimation = Window.Current.Compositor.CreateScalarKeyFrameAnimation();
+            if (isShow)
+            {
+                sliderPanelTranslationAnimation.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+                sliderPanelTranslationAnimation.DelayTime = TimeSpan.FromSeconds(0.2);
+            }
+            sliderPanelTranslationAnimation.Duration = TimeSpan.FromSeconds(0.5);
+            sliderPanelTranslationAnimation.Target = "Translation.X";
+            sliderPanelTranslationAnimation.InsertKeyFrame(0, horizontalOffsetFrom);
+            sliderPanelTranslationAnimation.InsertKeyFrame(1, horizontalOffsetTo);
+
+            var sliderPanelShowAnimations = Window.Current.Compositor.CreateAnimationGroup();
+            sliderPanelShowAnimations.Add(sliderPanelTranslationAnimation);
+            return sliderPanelShowAnimations;
+        }
+
+        #endregion
+
+        #region File IO
 
         private async void OpenFileClicked(object sender, RoutedEventArgs e)
         {
@@ -239,12 +285,6 @@ namespace SVCC.SurfaceDialDemo
                 WriteableBitmap = await BitmapFactory.FromStream(await file.OpenAsync(FileAccessMode.Read));
             }
             IsFileOpen = true;
-        }
-
-        private void ResetFilter()
-        {
-            EffectCanvas.Visibility = Visibility.Collapsed;
-            FilteredBitmap = null;
         }
 
         private async void SaveAsClicked(object sender, RoutedEventArgs e)
@@ -301,50 +341,7 @@ namespace SVCC.SurfaceDialDemo
             await new MessageBox(dialogText).WithOk().SafeShowAsync();
         }
 
-        private static CompositionAnimationGroup SetupAnimation(bool isShow)
-        {
-            float horizontalOffsetFrom, horizontalOffsetTo;
-            if (isShow)
-            {
-                horizontalOffsetFrom = -320;
-                horizontalOffsetTo = 0;
-            }
-            else
-            {
-                horizontalOffsetFrom = 0;
-                horizontalOffsetTo = -320;
-            }
-
-            var sliderPanelTranslationAnimation = Window.Current.Compositor.CreateScalarKeyFrameAnimation();
-            if (isShow)
-            {
-                sliderPanelTranslationAnimation.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
-                sliderPanelTranslationAnimation.DelayTime = TimeSpan.FromSeconds(0.2);
-            }
-            sliderPanelTranslationAnimation.Duration = TimeSpan.FromSeconds(0.5);
-            sliderPanelTranslationAnimation.Target = "Translation.X";
-            sliderPanelTranslationAnimation.InsertKeyFrame(0, horizontalOffsetFrom);
-            sliderPanelTranslationAnimation.InsertKeyFrame(1, horizontalOffsetTo);
-
-            var sliderPanelShowAnimations = Window.Current.Compositor.CreateAnimationGroup();
-            sliderPanelShowAnimations.Add(sliderPanelTranslationAnimation);
-            return sliderPanelShowAnimations;
-        }
-
-        private async void UndoClicked(object sender, RoutedEventArgs e)
-        {
-            await OpenImageFile(_currentFile);
-            IsDirty = false;
-        }
-
-        private void ValueSliderPanelOnLoaded(object sender, RoutedEventArgs routedEventArgs)
-        {
-            ElementCompositionPreview.SetIsTranslationEnabled(ValueSliderPanel, true);
-            ElementCompositionPreview.GetElementVisual(ValueSliderPanel);
-
-            ElementCompositionPreview.SetImplicitShowAnimation(ValueSliderPanel, SetupAnimation(true));
-            ElementCompositionPreview.SetImplicitHideAnimation(ValueSliderPanel, SetupAnimation(false));
-        }
+        #endregion
 
         #region Canvas
 
@@ -381,79 +378,17 @@ namespace SVCC.SurfaceDialDemo
             sender.Invalidate();
         }
 
-        private void Canvas_CreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
-        {
-            args.TrackAsyncAction(Canvas_CreateResourcesAsync(sender).AsAsyncAction());
-        }
-
-        async Task Canvas_CreateResourcesAsync(CanvasControl sender)
-        {
-            //_loadedImage = await CanvasBitmap.LoadAsync(sender, "HeadShot.jpeg");
-            //_ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
-        }
-
-
         private void Canvas_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (EffectCanvas.ReadyToDraw)
             {
                 if (_effect is ExposureEffect)
                 {
-                    _effect = CreateExposureEffect();
+                    _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
                 }
                 else
                 {
-                    _effect = CreateContrastEffect();
-                }
-            }
-        }
-
-        private ICanvasImage CreateExposureEffect()
-        {
-            ValueSlider.Minimum = -2;
-            ValueSlider.Maximum = 2;
-            ValueSlider.StepFrequency = 0.2;
-
-
-            var brightnessEffect = new ExposureEffect
-            {
-                Source = _loadedImage,
-                Exposure = 0
-            };
-
-            return brightnessEffect;
-        }
-
-        private ICanvasImage CreateContrastEffect()
-        {
-            ValueSlider.Minimum = -1;
-            ValueSlider.Maximum = 1;
-            ValueSlider.StepFrequency = 0.1;
-
-            var brightnessEffect = new ContrastEffect
-            {
-                Source = _loadedImage,
-                Contrast = 0
-            };
-
-            return brightnessEffect;
-        }
-
-        #endregion
-
-        #region InMemory Stream for transferring from Canvas to WriteableBitmap
-
-        private async Task TransferFromCanvasToWriteableBitmapAsync()
-        {
-            // Initialize the in-memory stream where data will be stored.
-            using (var stream = new Windows.Storage.Streams.InMemoryRandomAccessStream())
-            {
-                await CanvasImage.SaveAsync(_effect, new Rect(new Point(0, 0), _loadedImage.Size), 96, EffectCanvas, stream,
-                    CanvasBitmapFileFormat.Png);
-
-                using (var inputStream = stream.CloneStream())
-                {
-                    FilteredBitmap = await BitmapFactory.FromStream(inputStream);
+                    _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
                 }
             }
         }
