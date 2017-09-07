@@ -8,7 +8,9 @@ using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Provider;
+using Windows.Storage.Streams;
 using Windows.UI.Composition;
+using Windows.UI.Input;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -33,7 +35,8 @@ namespace SVCC.SurfaceDialDemo
         private string _filterText = "Sample";
         private bool _isDirty;
         private bool _isFileOpen;
-        private WriteableBitmap _writeableBitmap;
+        private WriteableBitmap _mainImageBitmap;
+        private RadialController _surfaceDial;
 
         #endregion
 
@@ -69,12 +72,12 @@ namespace SVCC.SurfaceDialDemo
             }
         }
 
-        public WriteableBitmap WriteableBitmap
+        public WriteableBitmap MainImageBitmap
         {
-            get => _writeableBitmap;
+            get => _mainImageBitmap;
             set
             {
-                _writeableBitmap = value;
+                _mainImageBitmap = value;
                 OnPropertyChanged();
             }
         }
@@ -85,12 +88,36 @@ namespace SVCC.SurfaceDialDemo
         {
             InitializeComponent();
             ValueSliderPanel.Loaded += ValueSliderPanelOnLoaded;
+            Loaded += (sender, args) => SetupSurfaceDial();
         }
+
+        #region Surface Dial
+
+        private void SetupSurfaceDial()
+        {
+            //if (!RadialController.IsSupported())
+            //{
+            //    return;
+            //}
+
+            _surfaceDial = RadialController.CreateForCurrentView();
+
+            var brightnessIcon = RandomAccessStreamReference.CreateFromUri(new Uri("ms-appx:///Assets/Bright.png"));
+            var brightnessMenuItem = RadialControllerMenuItem.CreateFromIcon("Brightness", brightnessIcon);
+            _surfaceDial.Menu.Items.Add(brightnessMenuItem);
+
+            var contrastIcon = RandomAccessStreamReference.CreateFromUri(new Uri("ms-appx:///Assets/Contrast.png"));
+            var contrastMenuItem = RadialControllerMenuItem.CreateFromIcon("Contrast", contrastIcon);
+            _surfaceDial.Menu.Items.Add(contrastMenuItem);
+
+        }
+
+        #endregion
 
         private async void ApplyFilterClicked(object sender, RoutedEventArgs e)
         {
             IsDirty = true;
-            WriteableBitmap = await _effect.WriteToWriteableBitmapAsync(EffectCanvas, _loadedImage.Size);
+            MainImageBitmap = await _effect.WriteToWriteableBitmapAsync(EffectCanvas, _loadedImage.Size);
             ResetFilter();
             ClosePanel();
         }
@@ -284,7 +311,7 @@ namespace SVCC.SurfaceDialDemo
             if (file != null)
             {
                 _currentFile = file;
-                WriteableBitmap = await BitmapFactory.FromStream(await file.OpenAsync(FileAccessMode.Read));
+                MainImageBitmap = await BitmapFactory.FromStream(await file.OpenAsync(FileAccessMode.Read));
                 ImageControl.Visibility = Visibility.Visible;
                 await LoadWin2DImageAsync();
             }
@@ -293,7 +320,7 @@ namespace SVCC.SurfaceDialDemo
 
         private async Task LoadWin2DImageAsync()
         {
-            _loadedImage = await WriteableBitmap.CreateCanvasBitmapAsync(EffectCanvas);
+            _loadedImage = await MainImageBitmap.CreateCanvasBitmapAsync(EffectCanvas);
             _ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
         }
 
@@ -328,7 +355,7 @@ namespace SVCC.SurfaceDialDemo
 
                 using (var stream = await file.OpenAsync(FileAccessMode.ReadWrite))
                 {
-                    await WriteableBitmap.ToStream(stream, encoderId);
+                    await MainImageBitmap.ToStream(stream, encoderId);
                 }
 
                 var status = await CachedFileManager.CompleteUpdatesAsync(file);
