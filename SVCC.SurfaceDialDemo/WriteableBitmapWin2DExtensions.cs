@@ -10,8 +10,7 @@ namespace SVCC.SurfaceDialDemo
 {
     public static class WriteableBitmapWin2DExtensions
     {
-        public static async Task<CanvasBitmap> ReadFromWriteableBitmapAsync(this CanvasBitmap canvasBitmap,
-            WriteableBitmap writeableBitmap, ICanvasResourceCreator canvasResourceCreator)
+        public static async Task<CanvasBitmap> CreateCanvasBitmapAsync(this WriteableBitmap writeableBitmap, ICanvasResourceCreator canvasResourceCreator)
         {
             using (var stream = new InMemoryRandomAccessStream())
             {

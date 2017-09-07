@@ -120,7 +120,7 @@ namespace SVCC.SurfaceDialDemo
                 ContrastToggle.IsChecked = false;
             }
             FilterText = "Brightness";
-            await _loadedImage.ReadFromWriteableBitmapAsync(WriteableBitmap, EffectCanvas);
+            await LoadWin2DImageAsync();
             _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
 
             HandlePanelVisibility();
@@ -159,7 +159,7 @@ namespace SVCC.SurfaceDialDemo
                 BrightnessToggle.IsChecked = false;
             }
             FilterText = "Contrast";
-            await _loadedImage.ReadFromWriteableBitmapAsync(WriteableBitmap, EffectCanvas);
+            await LoadWin2DImageAsync();
             _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
 
             HandlePanelVisibility();
@@ -183,6 +183,12 @@ namespace SVCC.SurfaceDialDemo
                 ValueSliderPanel.Visibility = Visibility.Collapsed;
                 EffectCanvas.Visibility = Visibility.Collapsed;
             }
+        }
+
+        private async Task LoadWin2DImageAsync()
+        {
+            _loadedImage = await WriteableBitmap.CreateCanvasBitmapAsync(EffectCanvas);
+            _ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
         }
 
         private void OnPropertyChanged([CallerMemberName] string propertyName = null)
