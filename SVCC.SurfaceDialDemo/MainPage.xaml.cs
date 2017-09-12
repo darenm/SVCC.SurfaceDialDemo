@@ -370,14 +370,16 @@ namespace SVCC.SurfaceDialDemo
             var ds = args.DrawingSession;
 
             Size destinationSize;
-            if (size.Height > size.Width)
+
+            if (_ratio > 1)
             {
-                //portrait
-                destinationSize = new Size(size.Width, size.Width / _ratio);
+                var heightRatio = size.Height / _loadedImage.Size.Height;
+                destinationSize = new Size(_loadedImage.Size.Width * heightRatio, size.Height);
             }
             else
             {
-                destinationSize = new Size(size.Height / _ratio, size.Height);
+                var widthRatio = size.Width / _loadedImage.Size.Width;
+                destinationSize = new Size(size.Width, _loadedImage.Size.Height * widthRatio);
             }
 
             var offset = new Point((size.Width - destinationSize.Width) / 2,
