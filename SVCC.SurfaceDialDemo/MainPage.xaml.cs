@@ -36,7 +36,6 @@ namespace SVCC.SurfaceDialDemo
         private bool _isDirty;
         private bool _isFileOpen;
         private WriteableBitmap _mainImageBitmap;
-        private RadialController _surfaceDial;
 
         #endregion
 
@@ -100,6 +99,11 @@ namespace SVCC.SurfaceDialDemo
         }
 
         #region Surface Dial
+
+        private RadialController _surfaceDial;
+        private RadialControllerMenuItem _brightnessMenuItem;
+        private RadialControllerMenuItem _contrastMenuItem;
+
 
         private void SetupSurfaceDial()
         {
@@ -223,6 +227,8 @@ namespace SVCC.SurfaceDialDemo
 
         #region Panel
 
+        private bool _isPanelOpen;
+
         private void ValueSliderPanelOnLoaded(object sender, RoutedEventArgs routedEventArgs)
         {
             SetupComposition();
@@ -230,6 +236,7 @@ namespace SVCC.SurfaceDialDemo
 
         private void ClosePanel()
         {
+            _isPanelOpen = false;
             ValueSlider.ValueChanged -= ContrastChanged;
             ValueSlider.ValueChanged -= BrightnessChanged;
 
@@ -245,6 +252,7 @@ namespace SVCC.SurfaceDialDemo
 
         private void ShowPanel()
         {
+            _isPanelOpen = true;
             ValueSlider.Value = 0;
             ValueSliderPanel.Visibility = Visibility.Visible;
             EffectCanvas.Visibility = Visibility.Visible;
@@ -267,9 +275,10 @@ namespace SVCC.SurfaceDialDemo
         private void ShowBrightnessFilter()
         {
             FilterText = "Brightness";
+            ValueSlider.ValueChanged -= ContrastChanged;
             _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
-            ShowPanel();
             ValueSlider.ValueChanged += BrightnessChanged;
+            ShowPanel();
         }
 
         #endregion
@@ -289,9 +298,10 @@ namespace SVCC.SurfaceDialDemo
         private void ShowContrastFilter()
         {
             FilterText = "Contrast";
+            ValueSlider.ValueChanged -= BrightnessChanged;
             _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
-            ShowPanel();
             ValueSlider.ValueChanged += ContrastChanged;
+            ShowPanel();
         }
 
         #endregion
@@ -354,7 +364,12 @@ namespace SVCC.SurfaceDialDemo
 
         private async void OpenFileClicked(object sender, RoutedEventArgs e)
         {
-            if (_isDirty)
+            if (_isPanelOpen)
+            {
+                ClosePanel();
+            }
+
+            if (IsDirty)
             {
                 var result = await new MessageBox("There are unsaved changes - discard and proceed?").WithYesNo()
                     .SafeShowAsync();
@@ -387,12 +402,13 @@ namespace SVCC.SurfaceDialDemo
                 await LoadWin2DImageAsync();
             }
             IsFileOpen = true;
+            IsDirty = false;
         }
 
         private async Task LoadWin2DImageAsync()
         {
             _loadedImage = await MainImageBitmap.CreateCanvasBitmapAsync(EffectCanvas);
-            _ratio = _loadedImage.Size.Height / _loadedImage.Size.Width;
+            _imageRatio = _loadedImage.Size.Height / _loadedImage.Size.Width;
         }
 
         private async void SaveAsClicked(object sender, RoutedEventArgs e)
@@ -455,9 +471,7 @@ namespace SVCC.SurfaceDialDemo
 
         private CanvasBitmap _loadedImage;
         private ICanvasImage _effect;
-        private double _ratio;
-        private RadialControllerMenuItem _brightnessMenuItem;
-        private RadialControllerMenuItem _contrastMenuItem;
+        private double _imageRatio;
 
         private void Canvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
         {
@@ -466,23 +480,20 @@ namespace SVCC.SurfaceDialDemo
                 return;
             }
 
-            var size = sender.Size;
+            var targetSize = sender.Size;
+            var imageSize = _loadedImage.Size;
+
+            var destinationRatio = targetSize.Height / targetSize.Width;
+            var widthsRatio = imageSize.Width / targetSize.Width;
+            var heightsRatio = imageSize.Height / targetSize.Height;
+            var ratioToUse = _imageRatio < destinationRatio ? widthsRatio : heightsRatio;
+
+            var destinationSize = new Size(imageSize.Width / ratioToUse, imageSize.Height / ratioToUse);
+
+            var offset = new Point((targetSize.Width - destinationSize.Width) / 2,
+                (targetSize.Height - destinationSize.Height) / 2);
+
             var ds = args.DrawingSession;
-
-            Size destinationSize;
-            if (size.Height > size.Width)
-            {
-                //portrait
-                destinationSize = new Size(size.Width, size.Width / _ratio);
-            }
-            else
-            {
-                destinationSize = new Size(size.Height / _ratio, size.Height);
-            }
-
-            var offset = new Point((size.Width - destinationSize.Width) / 2,
-                (size.Height - destinationSize.Height) / 2);
-
             ds.DrawImage(_effect, new Rect(offset, destinationSize), new Rect(offset, _loadedImage.Size));
 
             sender.Invalidate();
