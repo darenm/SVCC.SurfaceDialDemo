@@ -237,11 +237,16 @@ namespace SVCC.SurfaceDialDemo
         private void ClosePanel()
         {
             _isPanelOpen = false;
-            ValueSlider.ValueChanged -= ContrastChanged;
-            ValueSlider.ValueChanged -= BrightnessChanged;
+            RemoveValueSliderEvents();
 
             ValueSliderPanel.Visibility = Visibility.Collapsed;
             EffectCanvas.Visibility = Visibility.Collapsed;
+        }
+
+        private void RemoveValueSliderEvents()
+        {
+            ValueSlider.ValueChanged -= ContrastChanged;
+            ValueSlider.ValueChanged -= BrightnessChanged;
         }
 
         private void ClosePanelClicked(object sender, RoutedEventArgs e)
@@ -274,8 +279,8 @@ namespace SVCC.SurfaceDialDemo
 
         private void ShowBrightnessFilter()
         {
+            RemoveValueSliderEvents();
             FilterText = "Brightness";
-            ValueSlider.ValueChanged -= ContrastChanged;
             _effect = EffectFactory.CreateExposureEffect(_loadedImage, ValueSlider);
             ValueSlider.ValueChanged += BrightnessChanged;
             ShowPanel();
@@ -297,8 +302,8 @@ namespace SVCC.SurfaceDialDemo
 
         private void ShowContrastFilter()
         {
+            RemoveValueSliderEvents();
             FilterText = "Contrast";
-            ValueSlider.ValueChanged -= BrightnessChanged;
             _effect = EffectFactory.CreateContrastEffect(_loadedImage, ValueSlider);
             ValueSlider.ValueChanged += ContrastChanged;
             ShowPanel();
